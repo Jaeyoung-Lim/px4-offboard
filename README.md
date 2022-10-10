@@ -5,7 +5,10 @@ The `px4_offboard` package contains the following nodes
 - `offboard_control.py`: Example of offboard position control using position setpoints
 - `visualizer.py`: Used for visualizing vehicle states in Rviz
 
-![offboard](https://user-images.githubusercontent.com/5248102/194742116-64b93fcb-ec99-478d-9f4f-f32f7f06e9fd.gif)
+The source code is released under a BSD 3-Clause license.
+
+- **Author**: Jaeyoung Lim
+- **Affiliation**: Autonomous Systems Lab, ETH Zurich
 
 ## Setup
 Add the repository to the ros2 workspace
@@ -25,8 +28,14 @@ On a different terminal, run the micro ros agent
 ```
 micro-ros-agent udp4 --port 8888
 ```
-
-Open another terminal and run the visualizer
+In order to run the offboard position control example, open another terminal and run the the node.
+This runs two ros nodes, which publishes offboard position control setpoints and the visualizer.
 ```
-ros2 launch px4_offboard visualize_launch.py
+ros2 launch px4_offboard offboard_position_control.launch.py
+```
+![offboard](https://user-images.githubusercontent.com/5248102/194742116-64b93fcb-ec99-478d-9f4f-f32f7f06e9fd.gif)
+
+In order to just run the visualizer,
+```
+ros2 launch px4_offboard visualize.launch.py
 ```
