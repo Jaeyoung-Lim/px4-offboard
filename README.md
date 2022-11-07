@@ -17,18 +17,19 @@ git clone https://github.com/Jaeyoung-Lim/px4-offboard.git
 ```
 
 ## Running
-Run SITL instance using from the PX4 Autopilot firmware.
-> :warning: Currently need to be run from this [Pull Request](https://github.com/PX4/PX4-Autopilot/pull/20227)
+You will make use of 3 different terminals to run the offboard demo.
 
+On the first terminal, run a SITL instance from the PX4 Autopilot firmware.
 ```
 make px4_sitl gazebo
 ```
 
-On a different terminal, run the micro ros agent
+On the second terminal terminal, run the micro-ros-agent which will perform the mapping between Micro XRCE-DDS and RTPS. So that ROS2 Nodes are able to communicate with the PX4 micrortps_client.
 ```
 micro-ros-agent udp4 --port 8888
 ```
-In order to run the offboard position control example, open another terminal and run the the node.
+
+In order to run the offboard position control example, open a third terminal and run the the node.
 This runs two ros nodes, which publishes offboard position control setpoints and the visualizer.
 ```
 ros2 launch px4_offboard offboard_position_control.launch.py
