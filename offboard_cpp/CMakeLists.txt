@@ -16,7 +16,7 @@ find_package(px4_msgs REQUIRED)
 find_package(px4_ros_com REQUIRED)
 
 add_executable(offboard_cpp_node src/offboard_cpp_node.cpp)
-ament_target_dependencies(offboard_node rclcpp std_msgs px4_msgs px4_ros_com)
+ament_target_dependencies(offboard_cpp_node rclcpp std_msgs px4_msgs px4_ros_com)
 target_include_directories(offboard_cpp_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
