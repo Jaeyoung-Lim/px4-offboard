@@ -183,7 +183,7 @@ void OffboardControl::publish_trajectory_setpoint()  {
 	px4_msgs::msg::TrajectorySetpoint msg{};
 	msg.timestamp = int(this->get_clock()->now().nanoseconds() / 1000);
 	msg.position = {0.0, 0.0, -5.0};
-	msg.yaw = -3.14; // [-PI:PI]
+	msg.yaw = -M_PI; // [-PI:PI]
 
 	trajectory_setpoint_publisher_->publish(msg);
 }
