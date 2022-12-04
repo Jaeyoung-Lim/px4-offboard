@@ -83,16 +83,17 @@ export ROS_DISTRO=humble
 
 From:  [Building micro-ROS-Agent](https://github.com/micro-ROS/micro_ros_setup#building-micro-ros-agent)
 
-
-
 ```
 cd ~
 mkdir ~/microros_ws
 cd microros_ws
 git clone -b $ROS_DISTRO https://github.com/micro-ROS/micro_ros_setup.git 
+mkdir src
+mv micro_ros_setup/ src/
+colcon build
+source install/local_setup.sh
 ros2 run micro_ros_setup create_agent_ws.sh
 ros2 run micro_ros_setup build_agent.sh
-source install/local_setup.sh
 ```
 *Note how the ROS_DISTRO environment variable is used to specify the correct branch...
 
