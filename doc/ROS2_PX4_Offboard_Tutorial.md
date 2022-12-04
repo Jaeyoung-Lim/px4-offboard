@@ -104,6 +104,7 @@ This should build and may flash a few warnings:
 Try running the agent:
 
 ```
+source install/local_setup.sh
 ros2 run micro_ros_agent micro_ros_agent udp4 --port 8888
 ```
 
