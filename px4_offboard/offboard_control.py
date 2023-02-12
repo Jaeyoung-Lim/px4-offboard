@@ -32,8 +32,8 @@
 #
 ############################################################################
 
-__author__ = "Jaeyoung Lim"
-__contact__ = "jalim@ethz.ch"
+__author__ = "Jaeyoung Lim, Vinicius Abrao"
+__contact__ = "jalim@ethz.ch, vinicius.abrao@hotmail.com"
 
 import rclpy
 import numpy as np
@@ -44,7 +44,8 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDur
 from px4_msgs.msg import OffboardControlMode
 from px4_msgs.msg import TrajectorySetpoint
 from px4_msgs.msg import VehicleStatus
-
+from px4_msgs.msg import VehicleCommand
+from px4_msgs.msg import VehicleControlMode
 
 class OffboardControl(Node):
 
@@ -62,8 +63,9 @@ class OffboardControl(Node):
             '/fmu/out/vehicle_status',
             self.vehicle_status_callback,
             qos_profile)
-        self.publisher_offboard_mode = self.create_publisher(OffboardControlMode, '/fmu/in/offboard_control_mode', qos_profile)
-        self.publisher_trajectory = self.create_publisher(TrajectorySetpoint, '/fmu/in/trajectory_setpoint', qos_profile)
+        self.offboard_control_mode_publisher_ = self.create_publisher(OffboardControlMode, '/fmu/in/offboard_control_mode', qos_profile)
+        self.trajectory_setpoint_publisher_ = self.create_publisher(TrajectorySetpoint, '/fmu/in/trajectory_setpoint', qos_profile)
+        self.vehicle_command_publisher_ = self.create_publisher(VehicleCommand, '/fmu/in/vehicle_command', qos_profile)
         timer_period = 0.02  # seconds
         self.timer = self.create_timer(timer_period, self.cmdloop_callback)
 
@@ -72,6 +74,7 @@ class OffboardControl(Node):
         self.theta = 0.0
         self.radius = 10.0
         self.omega = 0.5
+        self.offboard_setpoint_counter_ = 0
  
     def vehicle_status_callback(self, msg):
         # TODO: handle NED->ENU transformation
@@ -80,22 +83,101 @@ class OffboardControl(Node):
         self.nav_state = msg.nav_state
 
     def cmdloop_callback(self):
-        # Publish offboard control modes
-        offboard_msg = OffboardControlMode()
-        offboard_msg.timestamp = int(Clock().now().nanoseconds / 1000)
-        offboard_msg.position=True
-        offboard_msg.velocity=False
-        offboard_msg.acceleration=False
-        self.publisher_offboard_mode.publish(offboard_msg)
-        if self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
+        if self.offboard_setpoint_counter_ == 50:
+            # Change to Offboard mode after 50 setpoints (1s)
+            self.engage_offBoard_mode()
+              
+            # Arm the vehicle
+            self.arm()
+           
+        if self.offboard_setpoint_counter_ == 1650:
+            # Land and cancel timer after (33s)
+            self.land()
+            self.timer.cancel()
+            
+        if self.offboard_setpoint_counter_ < 550:
+            # offboard_control_mode needs to be paired with trajectory_setpoint
+            print("start counter")
+            self.publish_offboard_control_mode()
+            if self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
+                self.publish_trajectory_setpoint()
+            self.offboard_setpoint_counter_ += 1
 
-            trajectory_msg = TrajectorySetpoint()
-            trajectory_msg.position[0] = self.radius * np.cos(self.theta)
-            trajectory_msg.position[1] = self.radius * np.sin(self.theta)
-            trajectory_msg.position[2] = -5.0
-            self.publisher_trajectory.publish(trajectory_msg)
+        if self.offboard_setpoint_counter_ >= 550 and self.offboard_setpoint_counter_ < 1650:
+            # offboard_control_mode needs to be paired with trajectory_setpoint
+            print("start counter")
+            self.publish_offboard_control_mode()
+            if self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
+                self.publish_trajectory_setpoint_circle()
+            self.offboard_setpoint_counter_ += 1
+            
+    def arm(self):
+        print("Arm command sent")
+        msg = VehicleCommand()
+        msg.param1 = 1.0
+        msg.command = VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM
+        self.publish_vehicle_command(msg)
 
-            self.theta = self.theta + self.omega * self.dt
+    def disarm(self):
+        print('Disarm command sent')
+        msg = VehicleCommand()
+        msg.command = VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM
+        self.publish_vehicle_command(msg)
+    
+    def land(self):
+        print('Land command sent')
+        msg = VehicleCommand()
+        msg.command = VehicleCommand.VEHICLE_CMD_NAV_LAND
+        self.publish_vehicle_command(msg)
+        
+    def publish_offboard_control_mode(self):
+        msg = OffboardControlMode()
+        msg.position = True
+        msg.velocity = False
+        msg.acceleration = False
+        msg.attitude = False
+        msg.body_rate = False
+        msg.timestamp = int(Clock().now().nanoseconds / 1000)
+        self.offboard_control_mode_publisher_.publish(msg)
+        
+    def engage_offBoard_mode(self):
+        print('Offboard mode command sent')
+        msg = VehicleCommand()
+        msg.param1 = 1.0
+        msg.param2 = 6.0
+        msg.command = VehicleCommand.VEHICLE_CMD_DO_SET_MODE
+        msg.target_system = 1
+        msg.target_component = 1
+        msg.source_system = 1
+        msg.source_component = 1
+        msg.from_external = True
+        self.publish_vehicle_command(msg)
+        
+    def publish_trajectory_setpoint(self):
+        msg = TrajectorySetpoint()
+        
+        msg.position = [0.0, 0.0, -5.0]
+        msg.yaw = -3.14
+        
+        msg.timestamp = int(Clock().now().nanoseconds / 1000)
+        self.trajectory_setpoint_publisher_.publish(msg)
+
+        
+    def publish_trajectory_setpoint_circle(self):
+        msg = TrajectorySetpoint()
+              
+        msg.position[0] = self.radius * np.cos(self.theta)
+        msg.position[1] = self.radius * np.sin(self.theta)
+        msg.position[2] = -5.0
+        
+        msg.timestamp = int(Clock().now().nanoseconds / 1000)
+        self.trajectory_setpoint_publisher_.publish(msg)
+        
+        self.theta = self.theta + self.omega * self.dt
+
+    def publish_vehicle_command(self, msg):
+        msg.timestamp = int(Clock().now().nanoseconds / 1000)
+        self.vehicle_command_publisher_.publish(msg)
 
 
 def main(args=None):
