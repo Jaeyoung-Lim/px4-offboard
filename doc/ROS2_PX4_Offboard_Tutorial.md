@@ -43,7 +43,7 @@ This should build. You may see some warnings interspered with the output.  As lo
 
 Follow these instructions to install the micro_ros_agent:  [Building micro-ROS-Agent](https://github.com/micro-ROS/micro_ros_setup#building-micro-ros-agent)
 
-Try running the agent (assumin the agent is install at `~/microros_ws`):
+Try running the agent (assuming the agent is installed at `~/microros_ws`):
 
 ```
 cd ~/microros_ws
@@ -288,7 +288,7 @@ The terminal should show:
 [rviz2-3] [INFO] [1680367856.847242023] [rviz2]: Stereo is NOT SUPPORTED
 ```
 
-Now head back to QGroundControl and enable offboard control.  Click the current mode "HOLD" in upper left, then in the menu, select `Offboard`:
+Now head back to QGroundControl and enable offboard control.  Click the current mode "HOLD" in upper left, then in the menu, select "Offboard":
 
 After a 1-2 sec pause, the demo should take control and you should see the 3d indicator in Rviz drawing circles.
 
