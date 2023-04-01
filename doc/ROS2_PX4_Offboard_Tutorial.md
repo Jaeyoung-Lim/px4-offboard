@@ -6,15 +6,12 @@ This tutorial explains how to interface ROS2 with PX4 (SITL) using DDS.
 ### Prerequisites
 
    * [ROS2 Installed](https://docs.px4.io/main/en/ros/ros2_comm.html#install-ros-2), and setup for your operating system (e.g. [Linux Ubuntu](https://docs.px4.io/main/en/dev_setup/dev_env_linux_ubuntu.html)) with Gazebo
-   * [FastDDS Installed](https://docs.px4.io/main/en/dev_setup/fast-dds-installation.html)
+   * [FastDDS Installed](https://docs.px4.io/v1.13/en/dev_setup/fast-dds-installation.html#fast-dds-installation)
    * [PX4-Autopilot downloaded](https://docs.px4.io/main/en/dev_setup/building_px4.html)
    * [QGroundControl installed](https://docs.qgroundcontrol.com/master/en/getting_started/download_and_install.html)
-
-### Example System Details
-
-  * Ubuntu 22.02
-  * ROS2 Humble
-  * Python 3.10
+   * Ubuntu 22.04
+   * ROS2 Humble
+   * Python 3.10
 
 ## Install PX4 Offboard and dependencies (one time setup)
 
@@ -27,146 +24,29 @@ git clone https://github.com/Jaeyoung-Lim/px4-offboard.git
 
 ### Install PX4 ROS Com and PX4 msg
 
-The `px4-offboard` example requires the `px4_ros_com` bridge and `px4_msgs` definitions:
+The `px4-offboard` example requires `px4_msgs` definitions:
 
 ```
-cd ~
-mkdir px4_ros_com_ws
-cd px4_ros_com_ws
-git clone https://github.com/PX4/px4_ros_com.git
+cd <colcon_workspace_path>
 git clone https://github.com/PX4/px4_msgs.git
 ```
 
-Build them:
+Build:
 
 ```
 colcon build
 ```
 
-This should build, and you should see evidence of it building both repos:
-
-```
-Starting >>> px4_msgs
-Finished <<< px4_msgs [6.42s]                     
-Starting >>> px4_ros_com
-Finished <<< px4_ros_com [0.13s]                  
-
-Summary: 2 packages finished [6.71s]
-```
-
-You may see some warnings interspered with the output.  As long as there are no __*errors*__ you should be OK..
+This should build. You may see some warnings interspered with the output.  As long as there are no __*errors*__ you should be OK..
 
 ## Install the micro_ros_agent  (one time setup)
 
-#### Check ROS Distro
+Follow these instructions to install the micro_ros_agent:  [Building micro-ROS-Agent](https://github.com/micro-ROS/micro_ros_setup#building-micro-ros-agent)
 
-When building micro_ros_agent, you need to build it for the particular ROS version you are using.  
-
-Ensure your ROS_DISTRO environment variable is set
+Try running the agent (assumin the agent is install at `~/microros_ws`):
 
 ```
-env | grep ROS
-```
-
-You should see this variable with some other ROS settings:
-
-```
-ROS_DISTRO=humble
-```
-
-If it's not set you can try to update:
-
-```
-export ROS_DISTRO=humble
-```
-
-
-*Note: If the ROS_DISTRO isn't set in your enviornment you probably don't have a clean ROS2 installation.  You may have issues with the rest of this tutorial.  Recommend reinstalling and checking your ROS2 installation*
-
-
-#### Building the micro_ros_agent
-
-From:  [Building micro-ROS-Agent](https://github.com/micro-ROS/micro_ros_setup#building-micro-ros-agent)
-
-```
-cd ~
-mkdir ~/microros_ws
-cd microros_ws
-git clone -b $ROS_DISTRO https://github.com/micro-ROS/micro_ros_setup.git 
-mkdir src
-mv micro_ros_setup/ src/
-```
-
-*Note how the `ROS_DISTRO` environment variable is used to specify the correct branch...
-
-Now build
-
-
-```
-colcon build
-source install/local_setup.sh
-ros2 run micro_ros_setup create_agent_ws.sh
-ros2 run micro_ros_setup build_agent.sh
-```
-
-
-This should build and may flash a few warnings:
-
-```
-colcon build
-[0.584s] WARNING:colcon.colcon_ros.prefix_path.ament:The path '/home/analyst/microros_ws/install/micro_ros_setup' in the environment variable AMENT_PREFIX_PATH doesn't exist
-[0.584s] WARNING:colcon.colcon_ros.prefix_path.ament:The path '/home/analyst/microros_ws/install/micro_ros_agent' in the environment variable AMENT_PREFIX_PATH doesn't exist
-[0.584s] WARNING:colcon.colcon_ros.prefix_path.ament:The path '/home/analyst/microros_ws/install/micro_ros_msgs' in the environment variable AMENT_PREFIX_PATH doesn't exist
-[0.585s] WARNING:colcon.colcon_ros.prefix_path.catkin:The path '/home/analyst/microros_ws/install/micro_ros_setup' in the environment variable CMAKE_PREFIX_PATH doesn't exist
-[0.585s] WARNING:colcon.colcon_ros.prefix_path.catkin:The path '/home/analyst/microros_ws/install/micro_ros_agent' in the environment variable CMAKE_PREFIX_PATH doesn't exist
-[0.585s] WARNING:colcon.colcon_ros.prefix_path.catkin:The path '/home/analyst/microros_ws/install/micro_ros_msgs' in the environment variable CMAKE_PREFIX_PATH doesn't exist
-Starting >>> micro_ros_setup
-Finished <<< micro_ros_setup [1.52s]                  
-
-Summary: 1 package finished [1.80s]
-analyst@casa:~/microros_ws$ source install/local_setup.sh 
-analyst@casa:~/microros_ws$ ros2 run micro_ros_setup create_agent_ws.sh
-..
-=== ./uros/micro-ROS-Agent (git) ===
-Cloning into '.'...
-=== ./uros/micro_ros_msgs (git) ===
-Cloning into '.'...
-#All required rosdeps installed successfully
-analyst@casa:~/microros_ws$ ros2 run micro_ros_setup build_agent.sh
-Building micro-ROS Agent
-[0.593s] WARNING:colcon.colcon_ros.prefix_path.ament:The path '/home/analyst/microros_ws/install/micro_ros_agent' in the environment variable AMENT_PREFIX_PATH doesn't exist
-[0.593s] WARNING:colcon.colcon_ros.prefix_path.ament:The path '/home/analyst/microros_ws/install/micro_ros_msgs' in the environment variable AMENT_PREFIX_PATH doesn't exist
-[0.593s] WARNING:colcon.colcon_ros.prefix_path.catkin:The path '/home/analyst/microros_ws/install/micro_ros_agent' in the environment variable CMAKE_PREFIX_PATH doesn't exist
-[0.593s] WARNING:colcon.colcon_ros.prefix_path.catkin:The path '/home/analyst/microros_ws/install/micro_ros_msgs' in the environment variable CMAKE_PREFIX_PATH doesn't exist
-Starting >>> micro_ros_msgs
-Finished <<< micro_ros_msgs [5.51s]                     
-Starting >>> micro_ros_agent
---- stderr: micro_ros_agent                                
-Cloning into 'xrceagent'...
-Switched to a new branch 'ros2'
-HEAD is now at 3eb56b5 Release v2.3.0
-CMake Warning (dev) at /usr/share/cmake-3.22/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
-  The package name passed to `find_package_handle_standard_args` (tinyxml2)
-  does not match the name of the calling package (TinyXML2).  This can lead
-  to problems in calling code that expects `find_package` result variables
-  (e.g., `_FOUND`) to follow a certain pattern.
-Call Stack (most recent call first):
-  cmake/modules/FindTinyXML2.cmake:40 (find_package_handle_standard_args)
-  /opt/ros/humble/share/fastrtps/cmake/fastrtps-config.cmake:51 (find_package)
-  CMakeLists.txt:153 (find_package)
-This warning is for project developers.  Use -Wno-dev to suppress it.
-
----
-Finished <<< micro_ros_agent [23.2s]
-
-Summary: 2 packages finished [29.0s]
-  1 package had stderr output: micro_ros_agent
-
-```
-
-Try running the agent:
-
-```
+cd ~/microros_ws
 source install/local_setup.sh
 ros2 run micro_ros_agent micro_ros_agent udp4 --port 8888
 ```
