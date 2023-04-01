@@ -22,7 +22,7 @@ cd ~
 git clone https://github.com/Jaeyoung-Lim/px4-offboard.git
 ```
 
-### Install PX4 ROS Com and PX4 msg
+### Install PX4 msg
 
 The `px4-offboard` example requires `px4_msgs` definitions:
 
