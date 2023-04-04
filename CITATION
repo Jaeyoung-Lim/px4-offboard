@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software in an academic context, please cite it as below."
+authors:
+- family-names: "Lim"
+  given-names: "Jaeyoung"
+  orcid: "https://orcid.org/0000-0002-5695-4511"
+title: "px4-offboard"
+version: v1.0
+date-released: 2023-04-04
+url: "https://github.com/Jaeyoung-Lim/px4-offboard"
