@@ -31,25 +31,31 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 ############################################################################
-
 __author__ = "Jaeyoung Lim"
 __contact__ = "jalim@ethz.ch"
+
+#!/usr/bin/env python
 
 import rclpy
 import numpy as np
 from rclpy.node import Node
 from rclpy.clock import Clock
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
+from rclpy.qos import (
+    QoSProfile,
+    QoSReliabilityPolicy,
+    QoSHistoryPolicy,
+    QoSDurabilityPolicy,
+)
 
 from px4_msgs.msg import OffboardControlMode
 from px4_msgs.msg import TrajectorySetpoint
+from px4_msgs.msg import VehicleCommand
 from px4_msgs.msg import VehicleStatus
 
 
 class OffboardControl(Node):
-
     def __init__(self):
-        super().__init__('minimal_publisher')
+        super().__init__("offboard_control")
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
             durability=QoSDurabilityPolicy.RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL,
@@ -57,13 +63,10 @@ class OffboardControl(Node):
             depth=1
         )
 
-        self.status_sub = self.create_subscription(
-            VehicleStatus,
-            '/fmu/out/vehicle_status',
-            self.vehicle_status_callback,
-            qos_profile)
-        self.publisher_offboard_mode = self.create_publisher(OffboardControlMode, '/fmu/in/offboard_control_mode', qos_profile)
-        self.publisher_trajectory = self.create_publisher(TrajectorySetpoint, '/fmu/in/trajectory_setpoint', qos_profile)
+        self.status_sub = self.create_subscription(VehicleStatus,"/fmu/out/vehicle_status",self.vehicle_status_callback,qos_profile)
+        self.publisher_offboard_mode = self.create_publisher(OffboardControlMode, "/fmu/in/offboard_control_mode", qos_profile)
+        self.publisher_trajectory = self.create_publisher(TrajectorySetpoint, "/fmu/in/trajectory_setpoint", qos_profile)
+        self.vehicle_command_publisher = self.create_publisher(VehicleCommand, "/fmu/in/vehicle_command", qos_profile)
         timer_period = 0.02  # seconds
         self.timer = self.create_timer(timer_period, self.cmdloop_callback)
 
@@ -72,30 +75,59 @@ class OffboardControl(Node):
         self.theta = 0.0
         self.radius = 10.0
         self.omega = 0.5
- 
+        self.arming_state = 0.0
+
+        self.counter = 0
+
+    def publish_vehicle_command(self, command, param1=0.0, param2=0.0):
+        msg = VehicleCommand()
+        msg.timestamp = int(Clock().now().nanoseconds / 1000)
+        msg.param1 = float(param1)
+        msg.param2 = float(param2)
+        msg.command = command
+        msg.target_system = 1
+        msg.target_component = 1
+        msg.source_system = 1
+        msg.source_component = 1
+        msg.from_external = True
+        self.vehicle_command_publisher.publish(msg=msg)
+
+    def set_mode_offboard(self):
+        self.get_logger().info("Setting mode to offboard!")
+        self.publish_vehicle_command(VehicleCommand.VEHICLE_CMD_DO_SET_MODE, 1.0, 6.0)
+
     def vehicle_status_callback(self, msg):
         # TODO: handle NED->ENU transformation
         print("NAV_STATUS: ", msg.nav_state)
         print("  - offboard status: ", VehicleStatus.NAVIGATION_STATE_OFFBOARD)
+        self.arming_state = msg.arming_state
         self.nav_state = msg.nav_state
 
-    def cmdloop_callback(self):
+    def publish_offboard_control_mode(self):
         # Publish offboard control modes
         offboard_msg = OffboardControlMode()
         offboard_msg.timestamp = int(Clock().now().nanoseconds / 1000)
-        offboard_msg.position=True
-        offboard_msg.velocity=False
-        offboard_msg.acceleration=False
+        offboard_msg.position = True
+        offboard_msg.velocity = False
+        offboard_msg.acceleration = False
         self.publisher_offboard_mode.publish(offboard_msg)
-        if self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
 
-            trajectory_msg = TrajectorySetpoint()
-            trajectory_msg.position[0] = self.radius * np.cos(self.theta)
-            trajectory_msg.position[1] = self.radius * np.sin(self.theta)
-            trajectory_msg.position[2] = -5.0
-            self.publisher_trajectory.publish(trajectory_msg)
+    def publish_trajectory_setpoint(self):
+        trajectory_msg = TrajectorySetpoint()
+        trajectory_msg.position[0] = self.radius * np.cos(self.theta)
+        trajectory_msg.position[1] = self.radius * np.sin(self.theta)
+        trajectory_msg.position[2] = -5.0
+        trajectory_msg.yaw = 0.0
+        self.publisher_trajectory.publish(trajectory_msg)
+        self.theta = self.theta + self.omega * self.dt
 
-            self.theta = self.theta + self.omega * self.dt
+    def cmdloop_callback(self):
+        # Publish offboard control modes
+        self.publish_offboard_control_mode()
+        if self.arming_state == 0.0:
+            self.get_logger().debug("Vehicle is unarmed!")
+        elif self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
+            self.publish_trajectory_setpoint()
 
 
 def main(args=None):
@@ -109,5 +141,5 @@ def main(args=None):
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
