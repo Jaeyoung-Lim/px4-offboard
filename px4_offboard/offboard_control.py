@@ -92,6 +92,21 @@ class OffboardControl(Node):
         msg.from_external = True
         self.vehicle_command_publisher.publish(msg=msg)
 
+    def arm(self):
+        self.publish_vehicle_command(
+            VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM,
+            VehicleCommand.ARMING_ACTION_ARM,
+        )
+        self.get_logger().info("Arming vehicle!")
+
+    def disarm(self):
+        self.publish_vehicle_command(
+            VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM,
+            VehicleCommand.ARMING_ACTION_DISARM,
+        )
+        self.get_logger().info("Disarming vehicle!")
+
+
     def set_mode_offboard(self):
         self.get_logger().info("Setting mode to offboard!")
         self.publish_vehicle_command(VehicleCommand.VEHICLE_CMD_DO_SET_MODE, 1.0, 6.0)
@@ -126,6 +141,7 @@ class OffboardControl(Node):
         self.publish_offboard_control_mode()
         if self.arming_state == 0.0:
             self.get_logger().debug("Vehicle is unarmed!")
+            # self.arm()
         elif self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
             self.publish_trajectory_setpoint()
 
