@@ -94,7 +94,7 @@ class OffboardControl(Node):
             trajectory_msg = TrajectorySetpoint()
             trajectory_msg.position[0] = self.radius * np.cos(self.theta)
             trajectory_msg.position[1] = self.radius * np.sin(self.theta)
-            trajectory_msg.position[2] = -3.0
+            trajectory_msg.position[2] = -1.0
             self.publisher_trajectory.publish(trajectory_msg)
 
             self.theta = self.theta + self.omega * self.dt
