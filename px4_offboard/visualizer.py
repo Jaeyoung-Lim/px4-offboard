@@ -118,20 +118,16 @@ class PX4Visualizer(Node):
         # trail size
         self.trail_size = 1000
 
-        # time stamp for the last local position update
+        # time stamp for the last local position update received on ROS2 topic
         self.last_local_pos_update = 0.0
         # time after which existing path is cleared upon receiving new
         # local position ROS2 message
-        self.path_clearing_timeout_ms = 1000
+        self.declare_parameter("path_clearing_timeout_ms", -1)
 
         timer_period = 0.05  # seconds
         self.timer = self.create_timer(timer_period, self.cmdloop_callback)
 
     def vehicle_attitude_callback(self, msg):
-        if (Clock().now().nanoseconds / 1e6 - self.last_local_pos_update) > self.path_clearing_timeout_ms:
-            self.vehicle_path_msg.poses.clear()    
-        self.last_local_pos_update = Clock().now().nanoseconds / 1e6
-
         # TODO: handle NED->ENU transformation
         self.vehicle_attitude[0] = msg.q[0]
         self.vehicle_attitude[1] = msg.q[1]
@@ -139,6 +135,18 @@ class PX4Visualizer(Node):
         self.vehicle_attitude[3] = -msg.q[3]
 
     def vehicle_local_position_callback(self, msg):
+        path_clearing_timeout_ms = (
+            self.get_parameter("path_clearing_timeout_ms")
+            .get_parameter_value()
+            .integer_value
+        )
+        if path_clearing_timeout_ms >= 0 and (
+            (Clock().now().nanoseconds / 1e6 - self.last_local_pos_update)
+            > path_clearing_timeout_ms
+        ):
+            self.vehicle_path_msg.poses.clear()
+        self.last_local_pos_update = Clock().now().nanoseconds / 1e6
+
         # TODO: handle NED->ENU transformation
         self.vehicle_local_position[0] = msg.x
         self.vehicle_local_position[1] = -msg.y
