@@ -23,7 +23,6 @@ setup(
     maintainer_email='jalim@ethz.ch',
     description='TODO: Package description',
     license='TODO: License declaration',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
                 'offboard_control = px4_offboard.offboard_control:main',
