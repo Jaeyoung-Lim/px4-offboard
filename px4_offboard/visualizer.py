@@ -141,11 +141,11 @@ class PX4Visualizer(Node):
         self.timer = self.create_timer(timer_period, self.cmdloop_callback)
 
     def vehicle_attitude_callback(self, msg):
-        # TODO: handle NED->ENU transformation
-        self.vehicle_attitude[0] = msg.q[0]
-        self.vehicle_attitude[1] = msg.q[1]
-        self.vehicle_attitude[2] = -msg.q[2]
-        self.vehicle_attitude[3] = -msg.q[3]
+        # NED-> ENU transformation
+        # Receives quaternion in NED frame as (qw, qx, qy, qz)
+        q_enu = 1/np.sqrt(2) * np.array([msg.q[0] + msg.q[3], msg.q[1] + msg.q[2], msg.q[1] - msg.q[2], msg.q[0] - msg.q[3]])
+        q_enu /= np.linalg.norm(q_enu)
+        self.vehicle_attitude = q_enu.astype(float)
 
     def vehicle_local_position_callback(self, msg):
         path_clearing_timeout = (
@@ -161,16 +161,16 @@ class PX4Visualizer(Node):
         self.last_local_pos_update = Clock().now().nanoseconds / 1e9
 
         # TODO: handle NED->ENU transformation
-        self.vehicle_local_position[0] = msg.x
-        self.vehicle_local_position[1] = -msg.y
+        self.vehicle_local_position[0] = msg.y
+        self.vehicle_local_position[1] = msg.x
         self.vehicle_local_position[2] = -msg.z
-        self.vehicle_local_velocity[0] = msg.vx
-        self.vehicle_local_velocity[1] = -msg.vy
+        self.vehicle_local_velocity[0] = msg.vy
+        self.vehicle_local_velocity[1] = msg.vx
         self.vehicle_local_velocity[2] = -msg.vz
 
     def trajectory_setpoint_callback(self, msg):
-        self.setpoint_position[0] = msg.position[0]
-        self.setpoint_position[1] = -msg.position[1]
+        self.setpoint_position[0] = msg.position[1]
+        self.setpoint_position[1] = msg.position[0]
         self.setpoint_position[2] = -msg.position[2]
 
     def create_arrow_marker(self, id, tail, vector):
