@@ -41,7 +41,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.clock import Clock
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
 from px4_msgs.msg import VehicleAttitude
 from px4_msgs.msg import VehicleLocalPosition
@@ -69,43 +69,56 @@ class PX4Visualizer(Node):
     def __init__(self):
         super().__init__("visualizer")
 
-        # Configure subscritpions
-        qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
-            history=QoSHistoryPolicy.RMW_QOS_POLICY_HISTORY_KEEP_LAST,
-            depth=1,
+        # Declare and retrieve the namespace parameter
+        self.declare_parameter('namespace', '')  # Default to empty namespace
+        self.namespace = self.get_parameter('namespace').value
+        self.namespace_prefix = f'/{self.namespace}' if self.namespace else ''
+
+        # QoS profiles
+        qos_profile_pub = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=0
+        )
+
+        qos_profile_sub = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            durability=QoSDurabilityPolicy.VOLATILE,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=0
         )
 
         self.attitude_sub = self.create_subscription(
             VehicleAttitude,
-            "/fmu/out/vehicle_attitude",
+            f"{self.namespace_prefix}/fmu/out/vehicle_attitude",
             self.vehicle_attitude_callback,
-            qos_profile,
+            qos_profile_sub,
         )
         self.local_position_sub = self.create_subscription(
             VehicleLocalPosition,
-            "/fmu/out/vehicle_local_position",
+            f"{self.namespace_prefix}/fmu/out/vehicle_local_position",
             self.vehicle_local_position_callback,
-            qos_profile,
+            qos_profile_sub,
         )
         self.setpoint_sub = self.create_subscription(
             TrajectorySetpoint,
-            "/fmu/in/trajectory_setpoint",
+            f"{self.namespace_prefix}/fmu/in/trajectory_setpoint",
             self.trajectory_setpoint_callback,
-            qos_profile,
+            qos_profile_sub,
         )
 
         self.vehicle_pose_pub = self.create_publisher(
-            PoseStamped, "/px4_visualizer/vehicle_pose", 10
+            PoseStamped, f"{self.namespace_prefix}/px4_visualizer/vehicle_pose", 10
         )
         self.vehicle_vel_pub = self.create_publisher(
-            Marker, "/px4_visualizer/vehicle_velocity", 10
+            Marker, f"{self.namespace_prefix}/px4_visualizer/vehicle_velocity", 10
         )
         self.vehicle_path_pub = self.create_publisher(
-            Path, "/px4_visualizer/vehicle_path", 10
+            Path, f"{self.namespace_prefix}/px4_visualizer/vehicle_path", 10
         )
         self.setpoint_path_pub = self.create_publisher(
-            Path, "/px4_visualizer/setpoint_path", 10
+            Path, f"{self.namespace_prefix}/px4_visualizer/setpoint_path", 10
         )
 
         self.vehicle_attitude = np.array([1.0, 0.0, 0.0, 0.0])
@@ -128,11 +141,11 @@ class PX4Visualizer(Node):
         self.timer = self.create_timer(timer_period, self.cmdloop_callback)
 
     def vehicle_attitude_callback(self, msg):
-        # TODO: handle NED->ENU transformation
-        self.vehicle_attitude[0] = msg.q[0]
-        self.vehicle_attitude[1] = msg.q[1]
-        self.vehicle_attitude[2] = -msg.q[2]
-        self.vehicle_attitude[3] = -msg.q[3]
+        # NED-> ENU transformation
+        # Receives quaternion in NED frame as (qw, qx, qy, qz)
+        q_enu = 1/np.sqrt(2) * np.array([msg.q[0] + msg.q[3], msg.q[1] + msg.q[2], msg.q[1] - msg.q[2], msg.q[0] - msg.q[3]])
+        q_enu /= np.linalg.norm(q_enu)
+        self.vehicle_attitude = q_enu.astype(float)
 
     def vehicle_local_position_callback(self, msg):
         path_clearing_timeout = (
@@ -148,16 +161,16 @@ class PX4Visualizer(Node):
         self.last_local_pos_update = Clock().now().nanoseconds / 1e9
 
         # TODO: handle NED->ENU transformation
-        self.vehicle_local_position[0] = msg.x
-        self.vehicle_local_position[1] = -msg.y
+        self.vehicle_local_position[0] = msg.y
+        self.vehicle_local_position[1] = msg.x
         self.vehicle_local_position[2] = -msg.z
-        self.vehicle_local_velocity[0] = msg.vx
-        self.vehicle_local_velocity[1] = -msg.vy
+        self.vehicle_local_velocity[0] = msg.vy
+        self.vehicle_local_velocity[1] = msg.vx
         self.vehicle_local_velocity[2] = -msg.vz
 
     def trajectory_setpoint_callback(self, msg):
-        self.setpoint_position[0] = msg.position[0]
-        self.setpoint_position[1] = -msg.position[1]
+        self.setpoint_position[0] = msg.position[1]
+        self.setpoint_position[1] = msg.position[0]
         self.setpoint_position[2] = -msg.position[2]
 
     def create_arrow_marker(self, id, tail, vector):
