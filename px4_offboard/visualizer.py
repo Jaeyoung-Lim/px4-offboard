@@ -35,7 +35,6 @@
 __author__ = "Jaeyoung Lim"
 __contact__ = "jalim@ethz.ch"
 
-from re import M
 import numpy as np
 
 import rclpy
@@ -49,21 +48,6 @@ from px4_msgs.msg import TrajectorySetpoint
 from geometry_msgs.msg import PoseStamped, Point
 from nav_msgs.msg import Path
 from visualization_msgs.msg import Marker
-
-
-def vector2PoseMsg(frame_id, position, attitude):
-    pose_msg = PoseStamped()
-    # msg.header.stamp = Clock().now().nanoseconds / 1000
-    pose_msg.header.frame_id = frame_id
-    pose_msg.pose.orientation.w = attitude[0]
-    pose_msg.pose.orientation.x = attitude[1]
-    pose_msg.pose.orientation.y = attitude[2]
-    pose_msg.pose.orientation.z = attitude[3]
-    pose_msg.pose.position.x = position[0]
-    pose_msg.pose.position.y = position[1]
-    pose_msg.pose.position.z = position[2]
-    return pose_msg
-
 
 class PX4Visualizer(Node):
     def __init__(self):
@@ -140,6 +124,19 @@ class PX4Visualizer(Node):
         timer_period = 0.05  # seconds
         self.timer = self.create_timer(timer_period, self.cmdloop_callback)
 
+    def vector2PoseMsg(self, frame_id, position, attitude):
+        pose_msg = PoseStamped()
+        pose_msg.header.stamp = self.get_clock().now().to_msg()
+        pose_msg.header.frame_id = frame_id
+        pose_msg.pose.orientation.w = attitude[0]
+        pose_msg.pose.orientation.x = attitude[1]
+        pose_msg.pose.orientation.y = attitude[2]
+        pose_msg.pose.orientation.z = attitude[3]
+        pose_msg.pose.position.x = position[0]
+        pose_msg.pose.position.y = position[1]
+        pose_msg.pose.position.z = position[2]
+        return pose_msg
+
     def vehicle_attitude_callback(self, msg):
         # NED-> ENU transformation
         # Receives quaternion in NED frame as (qw, qx, qy, qz)
@@ -154,7 +151,7 @@ class PX4Visualizer(Node):
             .double_value
         )
         if path_clearing_timeout >= 0 and (
-            (Clock().now().nanoseconds / 1e9 - self.last_local_pos_update)
+            (self.get_clock().now() / 1e9 - self.last_local_pos_update)
             > path_clearing_timeout
         ):
             self.vehicle_path_msg.poses.clear()
@@ -211,7 +208,7 @@ class PX4Visualizer(Node):
             del self.setpoint_path_msg.poses[0]
 
     def cmdloop_callback(self):
-        vehicle_pose_msg = vector2PoseMsg(
+        vehicle_pose_msg = self.vector2PoseMsg(
             "map", self.vehicle_local_position, self.vehicle_attitude
         )
         self.vehicle_pose_pub.publish(vehicle_pose_msg)
@@ -222,7 +219,7 @@ class PX4Visualizer(Node):
         self.vehicle_path_pub.publish(self.vehicle_path_msg)
 
         # Publish time history of the vehicle path
-        setpoint_pose_msg = vector2PoseMsg("map", self.setpoint_position, self.vehicle_attitude)
+        setpoint_pose_msg = self.vector2PoseMsg("odom", self.vehicle_local_position, self.vehicle_attitude)
         self.setpoint_path_msg.header = setpoint_pose_msg.header
         self.append_setpoint_path(setpoint_pose_msg)
         self.setpoint_path_pub.publish(self.setpoint_path_msg)

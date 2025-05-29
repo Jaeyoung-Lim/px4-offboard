@@ -38,7 +38,6 @@ __contact__ = "jalim@ethz.ch"
 import rclpy
 import numpy as np
 from rclpy.node import Node
-from rclpy.clock import Clock
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
 from px4_msgs.msg import OffboardControlMode
@@ -103,7 +102,7 @@ class OffboardControl(Node):
     def cmdloop_callback(self):
         # Publish offboard control modes
         offboard_msg = OffboardControlMode()
-        offboard_msg.timestamp = int(Clock().now().nanoseconds / 1000)
+        offboard_msg.timestamp = int(self.get_clock().now().nanoseconds / 1000)
         offboard_msg.position=True
         offboard_msg.velocity=False
         offboard_msg.acceleration=False
