@@ -53,11 +53,6 @@ class PX4Visualizer(Node):
     def __init__(self):
         super().__init__("visualizer")
 
-        # Declare and retrieve the namespace parameter
-        self.declare_parameter('namespace', '')  # Default to empty namespace
-        self.namespace = self.get_parameter('namespace').value
-        self.namespace_prefix = f'/{self.namespace}' if self.namespace else ''
-
         # QoS profiles
         qos_profile_pub = QoSProfile(
             reliability=QoSReliabilityPolicy.BEST_EFFORT,
@@ -75,34 +70,34 @@ class PX4Visualizer(Node):
 
         self.attitude_sub = self.create_subscription(
             VehicleAttitude,
-            f"{self.namespace_prefix}/fmu/out/vehicle_attitude",
+            "fmu/out/vehicle_attitude",
             self.vehicle_attitude_callback,
             qos_profile_sub,
         )
         self.local_position_sub = self.create_subscription(
             VehicleLocalPosition,
-            f"{self.namespace_prefix}/fmu/out/vehicle_local_position",
+            "fmu/out/vehicle_local_position",
             self.vehicle_local_position_callback,
             qos_profile_sub,
         )
         self.setpoint_sub = self.create_subscription(
             TrajectorySetpoint,
-            f"{self.namespace_prefix}/fmu/in/trajectory_setpoint",
+            "fmu/in/trajectory_setpoint",
             self.trajectory_setpoint_callback,
             qos_profile_sub,
         )
 
         self.vehicle_pose_pub = self.create_publisher(
-            PoseStamped, f"{self.namespace_prefix}/px4_visualizer/vehicle_pose", 10
+            PoseStamped, "px4_visualizer/vehicle_pose", 10
         )
         self.vehicle_vel_pub = self.create_publisher(
-            Marker, f"{self.namespace_prefix}/px4_visualizer/vehicle_velocity", 10
+            Marker, "px4_visualizer/vehicle_velocity", 10
         )
         self.vehicle_path_pub = self.create_publisher(
-            Path, f"{self.namespace_prefix}/px4_visualizer/vehicle_path", 10
+            Path, "px4_visualizer/vehicle_path", 10
         )
         self.setpoint_path_pub = self.create_publisher(
-            Path, f"{self.namespace_prefix}/px4_visualizer/setpoint_path", 10
+            Path, "px4_visualizer/setpoint_path", 10
         )
 
         self.vehicle_attitude = np.array([1.0, 0.0, 0.0, 0.0])
