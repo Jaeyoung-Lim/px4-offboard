@@ -49,7 +49,7 @@ class OffboardControl(Node):
 
     def __init__(self):
         super().__init__('minimal_publisher')
-        
+
                 # QoS profiles
         qos_profile_pub = QoSProfile(
             reliability=QoSReliabilityPolicy.BEST_EFFORT,
@@ -70,6 +70,11 @@ class OffboardControl(Node):
             'fmu/out/vehicle_status',
             self.vehicle_status_callback,
             qos_profile_sub)
+        self.status_sub = self.create_subscription(
+            VehicleStatus,
+            'fmu/out/vehicle_status_v1',
+            self.vehicle_status_callback,
+            qos_profile_sub)
         self.publisher_offboard_mode = self.create_publisher(OffboardControlMode, 'fmu/in/offboard_control_mode', qos_profile_pub)
         self.publisher_trajectory = self.create_publisher(TrajectorySetpoint, 'fmu/in/trajectory_setpoint', qos_profile_pub)
         timer_period = 0.02  # seconds
@@ -80,13 +85,13 @@ class OffboardControl(Node):
         self.declare_parameter('altitude', 5.0)
         self.nav_state = VehicleStatus.NAVIGATION_STATE_MAX
         self.arming_state = VehicleStatus.ARMING_STATE_DISARMED
-        # Note: no parameter callbacks are used to prevent sudden inflight changes of radii and omega 
+        # Note: no parameter callbacks are used to prevent sudden inflight changes of radii and omega
         # which would result in large discontinuities in setpoints
         self.theta = 0.0
         self.radius = self.get_parameter('radius').value
         self.omega = self.get_parameter('omega').value
         self.altitude = self.get_parameter('altitude').value
- 
+
     def vehicle_status_callback(self, msg):
         # TODO: handle NED->ENU transformation
         print("NAV_STATUS: ", msg.nav_state)
