@@ -80,6 +80,12 @@ class PX4Visualizer(Node):
             self.vehicle_local_position_callback,
             qos_profile_sub,
         )
+        self.local_position_sub = self.create_subscription(
+            VehicleLocalPosition,
+            "fmu/out/vehicle_local_position_v1",
+            self.vehicle_local_position_callback,
+            qos_profile_sub,
+        )
         self.setpoint_sub = self.create_subscription(
             TrajectorySetpoint,
             "fmu/in/trajectory_setpoint",
