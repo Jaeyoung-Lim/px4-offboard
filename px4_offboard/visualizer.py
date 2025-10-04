@@ -58,31 +58,31 @@ class PX4Visualizer(Node):
             reliability=QoSReliabilityPolicy.BEST_EFFORT,
             durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
             history=QoSHistoryPolicy.KEEP_LAST,
-            depth=0
+            depth=10
         )
 
         qos_profile_sub = QoSProfile(
             reliability=QoSReliabilityPolicy.BEST_EFFORT,
             durability=QoSDurabilityPolicy.VOLATILE,
             history=QoSHistoryPolicy.KEEP_LAST,
-            depth=0
+            depth=10
         )
 
         self.attitude_sub = self.create_subscription(
             VehicleAttitude,
-            "fmu/out/vehicle_attitude",
+            '/fmu/out/vehicle_attitude',
             self.vehicle_attitude_callback,
             qos_profile_sub,
         )
         self.local_position_sub = self.create_subscription(
             VehicleLocalPosition,
-            "fmu/out/vehicle_local_position",
+            '/fmu/out/vehicle_local_position_v1',
             self.vehicle_local_position_callback,
             qos_profile_sub,
         )
         self.setpoint_sub = self.create_subscription(
             TrajectorySetpoint,
-            "fmu/in/trajectory_setpoint",
+            '/fmu/in/trajectory_setpoint',
             self.trajectory_setpoint_callback,
             qos_profile_sub,
         )
@@ -108,7 +108,7 @@ class PX4Visualizer(Node):
         self.setpoint_path_msg = Path()
 
         # trail size
-        self.trail_size = 1000
+        self.trail_size = 100
 
         # time stamp for the last local position update received on ROS2 topic
         self.last_local_pos_update = 0.0
@@ -116,7 +116,7 @@ class PX4Visualizer(Node):
         # local position ROS2 message
         self.declare_parameter("path_clearing_timeout", -1.0)
 
-        timer_period = 0.05  # seconds
+        timer_period = 0.2  # seconds
         self.timer = self.create_timer(timer_period, self.cmdloop_callback)
 
     def vector2PoseMsg(self, frame_id, position, attitude):
@@ -150,6 +150,7 @@ class PX4Visualizer(Node):
             > path_clearing_timeout
         ):
             self.vehicle_path_msg.poses.clear()
+            self.setpoint_path_msg.poses.clear()
         self.last_local_pos_update = Clock().now().nanoseconds / 1e9
 
         # TODO: handle NED->ENU transformation
@@ -168,8 +169,8 @@ class PX4Visualizer(Node):
     def create_arrow_marker(self, id, tail, vector):
         msg = Marker()
         msg.action = Marker.ADD
-        msg.header.frame_id = "map"
-        # msg.header.stamp = Clock().now().nanoseconds / 1000
+        msg.header.frame_id = "odom"
+        msg.header.stamp = self.get_clock().now().to_msg()
         msg.ns = "arrow"
         msg.id = id
         msg.type = Marker.ARROW
@@ -204,7 +205,7 @@ class PX4Visualizer(Node):
 
     def cmdloop_callback(self):
         vehicle_pose_msg = self.vector2PoseMsg(
-            "map", self.vehicle_local_position, self.vehicle_attitude
+            "odom", self.vehicle_local_position, self.vehicle_attitude
         )
         self.vehicle_pose_pub.publish(vehicle_pose_msg)
 
@@ -213,8 +214,8 @@ class PX4Visualizer(Node):
         self.append_vehicle_path(vehicle_pose_msg)
         self.vehicle_path_pub.publish(self.vehicle_path_msg)
 
-        # Publish time history of the vehicle path
-        setpoint_pose_msg = self.vector2PoseMsg("odom", self.vehicle_local_position, self.vehicle_attitude)
+        # Publish time history of the setpoint path
+        setpoint_pose_msg = self.vector2PoseMsg("odom", self.setpoint_position, [1.0, 0.0, 0.0, 0.0])  # Use default attitude for setpoint
         self.setpoint_path_msg.header = setpoint_pose_msg.header
         self.append_setpoint_path(setpoint_pose_msg)
         self.setpoint_path_pub.publish(self.setpoint_path_msg)

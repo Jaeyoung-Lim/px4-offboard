@@ -76,6 +76,21 @@ def generate_launch_description():
                 {'namespace': namespace}
             ]
         ),
+        # NEW: Static TF publisher for map -> odom (identity transform)
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='static_tf_pub_map_odom',
+            arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom']
+        ),
+
+        Node(  # Add this new node for odom_converter
+            package='px4_offboard',
+            namespace=namespace,
+            executable='odom_converter',
+            name='odom_converter'
+        ),
+
         OpaqueFunction(function=launch_setup),
     ])
 
