@@ -47,12 +47,12 @@ import tempfile
 def generate_launch_description():
 
     # Declare the namespace argument (it can be provided when launching)
-    namespace = LaunchConfiguration('namespace', default='px4_offboard')
+    namespace = LaunchConfiguration('namespace')
 
     return LaunchDescription([
         DeclareLaunchArgument(
             'namespace',
-            default_value='px4_offboard',
+            default_value='',
             description='Namespace of the nodes'
         ),
         Node(
