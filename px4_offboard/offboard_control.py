@@ -113,10 +113,9 @@ class OffboardControl(Node):
         if self.offboard_setpoint_counter < 11:
             self.offboard_setpoint_counter += 1
 
-        # Keep the initial setpoint fixed during startup. Once PX4 confirms both
-        # Offboard and armed, advance it around the circle.
-        if (self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD and
-                self.arming_state == VehicleStatus.ARMING_STATE_ARMED):
+        # Keep the initial setpoint fixed during startup, then advance it around
+        # the circle without depending on optional return telemetry.
+        if self.offboard_setpoint_counter >= 11:
             self.theta += self.omega * self.dt
 
     def publish_offboard_control_mode(self):
