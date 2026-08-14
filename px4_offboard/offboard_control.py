@@ -93,7 +93,6 @@ class OffboardControl(Node):
         self.altitude = self.get_parameter('altitude').value
 
     def vehicle_status_callback(self, msg):
-        # TODO: handle NED->ENU transformation
         self.nav_state = msg.nav_state
         self.arming_state = msg.arming_state
 
